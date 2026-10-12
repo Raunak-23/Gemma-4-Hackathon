@@ -1,0 +1,6 @@
+*.docx
+*.pdf
+*.pptx
+__pycache__/
+*.pyc
+.pytest_cache/
