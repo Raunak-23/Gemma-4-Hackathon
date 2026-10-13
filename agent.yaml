@@ -1,0 +1,22 @@
+agent_class: LlmAgent
+name: swe_coder
+model: gemma-4-31b-it-qat-w4a16-ct
+adapter: main_lora
+description: "Autonomous software engineering agent designed to locate, reproduce, fix, and verify repository bugs using the Gemma 4 architecture."
+instruction: !include prompts/system.md
+tools:
+  - run_command
+  - read_file
+  - edit_file
+  - write_file
+  - get_status
+  - submit_patch
+  - search_similar_code
+  - get_code_neighbors
+  - get_code_subgraph
+  - agent_tool:
+      config_path: sub_agents/code_analyzer.yaml
+      skip_summarization: true
+skills:
+  - skills/repo_navigation
+generate_content_config: !include configs/sampling.yaml
