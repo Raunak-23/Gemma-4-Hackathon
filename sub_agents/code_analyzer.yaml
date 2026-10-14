@@ -1,7 +1,6 @@
 agent_class: LlmAgent
 name: code_analyzer
 model: gemma-4-31b-it-qat-w4a16-ct
-adapter: tool_lora
 description: "Specialized read-only code intelligence assistant that explores codebase structure, queries AST and dependency graphs, and locates relevant source symbols without modifying files."
 instruction: !include prompts/analyzer.md
 tools:
