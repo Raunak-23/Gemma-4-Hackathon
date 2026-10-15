@@ -1,0 +1,34 @@
+{
+  "run_id": "baseline_sample_full",
+  "agent_dir": "sample_submission",
+  "total_tasks": 5,
+  "resolved_tasks": 0,
+  "resolution_rate": 0.0,
+  "total_runtime_seconds": 2.35,
+  "avg_runtime_seconds": 0.47,
+  "total_tokens": 13600,
+  "avg_tokens_per_task": 2720.0,
+  "total_tool_errors": 3,
+  "per_repo": {
+    "psf/requests": {
+      "total": 1,
+      "resolved": 0
+    },
+    "pallets/flask": {
+      "total": 1,
+      "resolved": 0
+    },
+    "pytest-dev/pytest": {
+      "total": 1,
+      "resolved": 0
+    },
+    "sympy/sympy": {
+      "total": 1,
+      "resolved": 0
+    },
+    "sqlfluff/sqlfluff": {
+      "total": 1,
+      "resolved": 0
+    }
+  }
+}

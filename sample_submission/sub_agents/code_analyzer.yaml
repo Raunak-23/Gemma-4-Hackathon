@@ -1,0 +1,11 @@
+agent_class: LlmAgent
+name: code_analyzer
+model: gemma-4-31b-it-qat-w4a16-ct
+description: "Code analysis and search assistant."
+instruction: !include prompts/analyzer.md
+tools:
+  - search_similar_code
+  - get_code_neighbors
+  - get_code_subgraph
+  - read_file
+generate_content_config: !include configs/sampling.yaml

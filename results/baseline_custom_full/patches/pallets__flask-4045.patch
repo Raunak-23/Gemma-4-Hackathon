@@ -1,0 +1,11 @@
+diff --git a/src/flask/blueprints.py b/src/flask/blueprints.py
+index abace44..d877613 100644
+--- a/src/flask/blueprints.py
++++ b/src/flask/blueprints.py
+@@ -1,4 +1,6 @@
+ # Baseline code for src/flask/blueprints.py
+ class Blueprint:
+     def __init__(self, name, import_name):
++        if '.' in name:
++            raise ValueError('Blueprint names may not contain dots.')
+         self.name = name

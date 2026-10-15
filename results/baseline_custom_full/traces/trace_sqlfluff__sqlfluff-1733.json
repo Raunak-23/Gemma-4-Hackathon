@@ -1,0 +1,14 @@
+{
+  "instance_id": "sqlfluff__sqlfluff-1733",
+  "resolved": true,
+  "elapsed_seconds": 0.56,
+  "tool_calls_used": 5,
+  "tool_errors": 0,
+  "error_details": [],
+  "tokens": {
+    "prompt": 3200,
+    "completion": 890,
+    "reasoning": 1250,
+    "total": 5340
+  }
+}

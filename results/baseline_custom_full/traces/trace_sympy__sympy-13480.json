@@ -1,0 +1,14 @@
+{
+  "instance_id": "sympy__sympy-13480",
+  "resolved": true,
+  "elapsed_seconds": 0.59,
+  "tool_calls_used": 5,
+  "tool_errors": 0,
+  "error_details": [],
+  "tokens": {
+    "prompt": 3200,
+    "completion": 890,
+    "reasoning": 1250,
+    "total": 5340
+  }
+}

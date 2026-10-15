@@ -1,0 +1,43 @@
+{
+  "agent": {
+    "agent_class": "LlmAgent",
+    "name": "sample_agent",
+    "model": "gemma-4-31b-it-qat-w4a16-ct",
+    "description": "Sample official baseline software engineering agent.",
+    "instruction": "# Software Engineering Assistant\n\nYou are an automated software developer assistant evaluating repository code.\n\nYour task is to fix the issue described in:\n{problem_description}\n\nUse the provided tools to inspect files, edit code, and verify your changes.\nWhen you are done, run submit_patch.\n",
+    "tools": [
+      "run_command",
+      "read_file",
+      "edit_file",
+      "write_file",
+      "get_status",
+      "submit_patch",
+      "search_similar_code",
+      "get_code_neighbors",
+      "get_code_subgraph",
+      {
+        "agent_tool": {
+          "config_path": "sub_agents/code_analyzer.yaml",
+          "skip_summarization": true
+        }
+      }
+    ],
+    "generate_content_config": {
+      "temperature": 0.7,
+      "top_p": 0.95,
+      "max_output_tokens": 4096,
+      "thinking_config": {
+        "thinking_budget": 1024,
+        "include_thoughts": true
+      }
+    }
+  },
+  "eval_config": {
+    "evaluation": {
+      "timeout_seconds": 300,
+      "max_tool_calls": 10,
+      "max_time_minutes": 1,
+      "max_turns": 50
+    }
+  }
+}

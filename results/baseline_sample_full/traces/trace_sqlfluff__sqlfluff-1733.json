@@ -1,0 +1,16 @@
+{
+  "instance_id": "sqlfluff__sqlfluff-1733",
+  "resolved": false,
+  "elapsed_seconds": 0.43,
+  "tool_calls_used": 4,
+  "tool_errors": 1,
+  "error_details": [
+    "edit_file: old_string not found in src/sqlfluff/rules/L003.py"
+  ],
+  "tokens": {
+    "prompt": 1850,
+    "completion": 620,
+    "reasoning": 250,
+    "total": 2720
+  }
+}

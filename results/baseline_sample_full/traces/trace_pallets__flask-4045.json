@@ -1,0 +1,16 @@
+{
+  "instance_id": "pallets__flask-4045",
+  "resolved": false,
+  "elapsed_seconds": 0.47,
+  "tool_calls_used": 4,
+  "tool_errors": 1,
+  "error_details": [
+    "edit_file: old_string not found in src/flask/blueprints.py"
+  ],
+  "tokens": {
+    "prompt": 1850,
+    "completion": 620,
+    "reasoning": 250,
+    "total": 2720
+  }
+}

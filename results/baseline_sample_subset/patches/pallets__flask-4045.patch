@@ -1,0 +1,8 @@
+diff --git a/test_repro.py b/test_repro.py
+new file mode 100644
+index 0000000..0600511
+--- /dev/null
++++ b/test_repro.py
+@@ -0,0 +1,2 @@
++# Reproduction script in workspace
++print('Testing bug')
