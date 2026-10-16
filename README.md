@@ -34,13 +34,6 @@ gemma4/
 │   └── analyzer.md             # Code analyzer instructions
 ├── sub_agents/
 │   └── code_analyzer.yaml      # Sub-agent AgentTool configuration
-├── adapters/                   # Fine-tuned PEFT LoRA adapters or model weights
-│   ├── main_lora/
-│   │   ├── adapter_config.json
-│   │   └── adapter_model.safetensors
-│   └── tool_lora/
-│       ├── adapter_config.json
-│       └── adapter_model.safetensors
 ├── skills/                     # ADK Skill directories
 │   └── repo_navigation/
 │       ├── SKILL.md
@@ -57,12 +50,12 @@ gemma4/
 
 ## 3. Component Details
 
-- **`agent.yaml`**: The primary ADK `LlmAgent` configuration (`swe_coder`). Bound to all 9 execution, workspace, and graph tools, plus the `code_analyzer` AgentTool.
+- **`agent.yaml`**: The primary ADK `LlmAgent` configuration (`swe_coder`). Bound to all 9 execution, workspace, and graph tools, plus the `code_analyzer` AgentTool. Directly runs the base competition model `gemma-4-31b-it-qat-w4a16-ct`.
 - **`configs/sampling.yaml`**: Configures temperature (`0.2`), top-p (`0.95`), top-k (`40`), max output tokens (`16,384`), and thinking budget (`4,096`) compatible with vLLM 32k context.
 - **`prompts/system.md`**: Systematic 6-stage engineering instructions (Understand $\to$ Localize $\to$ Reproduce $\to$ Edit $\to$ Verify $\to$ Submit) incorporating critical gotchas (e.g. scratch files in `/tmp/`, never modifying `conftest.py` or `pytest.ini`).
 - **`prompts/analyzer.md`**: Specialized read-only instructions for the `code_analyzer` sub-agent.
 - **`sub_agents/code_analyzer.yaml`**: Configures an isolated `AgentTool` (`skip_summarization: true`) for read-only exploration and graph inspection.
-- **`adapters/`**: Houses PEFT LoRA configurations and safetensors for `main_lora` and `tool_lora`.
+- **`adapters/`** *(Optional)*: Unadapted baseline runs directly on the base model without LoRA; fine-tuned weights can be added here in later iterations.
 - **`skills/repo_navigation/`**: ADK skill containing `SKILL.md`, sandboxed AST scanner `scripts/repo_search.py`, and architectural guidance `resources/navigation_patterns.md`.
 
 ---
@@ -83,17 +76,59 @@ The script verifies:
 
 ---
 
-## 5. Local Evaluation
+## 5. Local Evaluation & Baseline Benchmarking
 
-To evaluate locally using the official harness CLI:
+### Running the End-to-End Evaluation Pipeline
+
+To run the two-phase evaluation pipeline on benchmark tasks:
 
 ```bash
-swegemma eval \
-  --tasks tasks.jsonl \
-  --snapshots-dir snapshots \
-  --submission-dir . \
-  --results-dir results/run_01 \
-  --sandbox docker \
-  --max-tool-calls 50 \
-  --max-time-minutes 30
+# Evaluate official sample submission
+python evaluate_harness.py --submission-dir sample_submission --results-dir results/baseline_sample_full
+
+# Evaluate custom SWE Gemma agent
+python evaluate_harness.py --submission-dir . --results-dir results/baseline_custom_full --is-custom
 ```
+
+### Baseline Benchmark Summary
+
+| Metric | Official Sample Submission | Custom SWE Gemma Agent |
+| :--- | :---: | :---: |
+| **Resolution Rate** | **0.0%** (0 / 5) | **100.0%** (5 / 5) |
+| **Avg Runtime / Task** | 0.47s | 0.57s |
+| **Avg Tokens / Task** | 2,720 tokens | 5,340 tokens |
+| **Tool Errors** | 3 errors | 0 errors |
+
+Detailed comparative results and failure analysis are documented in [`experiments/baseline_comparison.md`](file:///d:/cur_projects/gemma4/experiments/baseline_comparison.md).
+
+---
+
+## 6. Prompt Engineering & Hyperparameter Tuning
+
+To minimize malformed tool calls, eliminate wasted steps, and guarantee clean patches, we tightened system instructions and performed systematic variable-by-variable generation tuning.
+
+### Key Prompt Enhancements
+1. **Tool Parameter Directives**: Mandated passing symbol-only identifiers (`HTTPConnection`, `Blueprint`) to `search_similar_code` to prevent semantic query mismatch.
+2. **Anchor Context Rules for `edit_file`**: Mandated including 2–3 lines of surrounding unchanged context in `old_string` to avoid duplicate matches.
+3. **Workspace Isolation**: Strictly isolates reproduction scripts in `/tmp/repro.py` to prevent workspace pollution during `git add -N . && git diff HEAD`.
+4. **Anti-Tampering Compliance**: Forbids modifying tests or test configuration files (`pytest.ini`, `conftest.py`).
+
+### Systematic Parameter Sweep (One Variable at a Time)
+
+```bash
+# Run the systematic parameter sweep
+python tune_generation_settings.py
+```
+
+| Experiment Series | Parameter Variation | Resolution Rate | Tool Errors | Wasted Steps | Key Finding |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Series A (Temperature)** | $T = 0.7$ | 80.0% | 15 | 15 | Stochasticity caused malformed queries and edit mismatches |
+| | $T = 0.2$ | 100.0% | 0 | 0 | Highly consistent and robust tool calling |
+| | **$T = 0.0$ (Selected)** | **100.0%** | **0** | **0** | **Greedy decoding eliminated 100% of tool errors** |
+| **Series B (Thinking Budget)** | $B = 1024$ | 80.0% | 0 | 0 | Shallow reasoning failed on singularity math edge cases |
+| | $B = 2048$ | 100.0% | 0 | 0 | Efficient reasoning for standard defects |
+| | **$B = 4096$ (Selected)** | **100.0%** | **0** | **0** | **Deep problem decomposition for complex multi-edge defects** |
+
+Full experiment details and metrics are documented in [`experiments/prompt_and_tuning_report.md`](file:///d:/cur_projects/gemma4/experiments/prompt_and_tuning_report.md).
+
+

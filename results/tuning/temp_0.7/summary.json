@@ -1,0 +1,19 @@
+{
+  "variation_name": "temp_0.7",
+  "parameters": {
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 16384,
+    "thinking_budget": 4096
+  },
+  "tasks_evaluated": 5,
+  "resolved_tasks": 4,
+  "resolution_rate": 0.8,
+  "total_runtime_seconds": 2.18,
+  "avg_runtime_seconds": 0.44,
+  "total_tokens": 37750,
+  "avg_tokens_per_task": 7550.0,
+  "total_tool_errors": 15,
+  "total_wasted_steps": 15
+}
