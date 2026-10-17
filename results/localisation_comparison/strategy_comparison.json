@@ -1,0 +1,47 @@
+[
+  {
+    "variation": "1_similarity_first_direct",
+    "mode": "similarity_first_targeted",
+    "use_subagent": false,
+    "total_tasks": 5,
+    "resolved_tasks": 5,
+    "resolution_rate": 1.0,
+    "total_runtime_seconds": 2.98,
+    "avg_runtime_seconds": 0.6,
+    "total_tokens": 26000,
+    "avg_tokens_per_task": 5200.0,
+    "total_tool_errors": 0,
+    "total_wasted_steps": 0,
+    "total_irrelevant_file_reads": 0
+  },
+  {
+    "variation": "2_graph_first_broad",
+    "mode": "graph_first_broad",
+    "use_subagent": false,
+    "total_tasks": 5,
+    "resolved_tasks": 4,
+    "resolution_rate": 0.8,
+    "total_runtime_seconds": 3.04,
+    "avg_runtime_seconds": 0.61,
+    "total_tokens": 30500,
+    "avg_tokens_per_task": 6100.0,
+    "total_tool_errors": 0,
+    "total_wasted_steps": 10,
+    "total_irrelevant_file_reads": 5
+  },
+  {
+    "variation": "3_subagent_delegation",
+    "mode": "similarity_first_targeted",
+    "use_subagent": true,
+    "total_tasks": 5,
+    "resolved_tasks": 5,
+    "resolution_rate": 1.0,
+    "total_runtime_seconds": 3.19,
+    "avg_runtime_seconds": 0.64,
+    "total_tokens": 41250,
+    "avg_tokens_per_task": 8250.0,
+    "total_tool_errors": 0,
+    "total_wasted_steps": 0,
+    "total_irrelevant_file_reads": 0
+  }
+]

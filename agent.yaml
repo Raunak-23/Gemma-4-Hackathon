@@ -13,9 +13,6 @@ tools:
   - search_similar_code
   - get_code_neighbors
   - get_code_subgraph
-  - agent_tool:
-      config_path: sub_agents/code_analyzer.yaml
-      skip_summarization: true
 skills:
   - skills/repo_navigation
 generate_content_config: !include configs/sampling.yaml

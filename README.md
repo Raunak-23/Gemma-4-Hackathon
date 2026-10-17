@@ -131,4 +131,37 @@ python tune_generation_settings.py
 
 Full experiment details and metrics are documented in [`experiments/prompt_and_tuning_report.md`](file:///d:/cur_projects/gemma4/experiments/prompt_and_tuning_report.md).
 
+---
+
+## 7. Code Localisation, Repair Loop, and Architecture Optimization
+
+### Key Strategies & Guidelines
+1. **Similarity Search First**: Always execute `search_similar_code` before graph-neighbour (`get_code_neighbors`) or subgraph (`get_code_subgraph`) queries. Embedding lookup pinpoints exact definition lines in 1 turn (~150 tokens) without dumping noisy AST graphs into context.
+2. **Targeted Bounded Slicing**: Prohibit reading from line 1 of files > 50 lines. Slices are bounded to 30–50 lines centered around the localized definition line (`start_line = def_line - 10`, `end_line = def_line + 35`).
+3. **Disciplined Reproduce $\to$ Edit $\to$ Test Loop**:
+   - Write reproduction script strictly to `/tmp/repro.py`.
+   - Validate pre-condition: `python3 /tmp/repro.py` must FAIL before any edits.
+   - Apply surgical edit with 2–3 contextual anchor lines via `edit_file`.
+   - Validate post-condition: `python3 /tmp/repro.py` must PASS with exit code 0.
+   - Run module unit tests with `pytest`.
+   - Inspect `git status && git diff` to verify zero workspace contamination before `submit_patch()`.
+
+### Sub-Agent vs. Direct Tool Use Benchmark
+
+```bash
+# Run the localisation strategies and architecture benchmark
+python compare_localisation_strategies.py
+```
+
+| Strategy / Architecture | Resolution Rate | Tokens / Task | Wasted Steps | Irrelevant Reads | Runtime / Task |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Similarity-First + Direct Tool Use (Selected)** | **100.0%** (5/5) | **5,200** | **0** | **0** | **0.60s** |
+| Graph-First Blind Subgraphs + Broad Reads | 80.0% (4/5) | 6,100 | 10 | 5 | 0.61s |
+| Similarity-First + Sub-Agent (`code_analyzer`) | **100.0%** (5/5) | 8,250 (+58.7%) | 0 | 0 | 0.64s |
+
+**Architectural Decision**: Direct Tool Use achieves 100% resolution with **37.0% fewer tokens** (saving 3,050 tokens/task) and zero inter-agent latency or summarization fidelity loss. Root `agent.yaml` has been streamlined to direct tool use.
+
+Comprehensive report available in [`experiments/localisation_and_repair_report.md`](file:///d:/cur_projects/gemma4/experiments/localisation_and_repair_report.md).
+
+
 
