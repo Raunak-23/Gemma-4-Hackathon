@@ -1,0 +1,9 @@
+diff --git a/astropy/modeling/separable.py b/astropy/modeling/separable.py
+index 0debe14..834b39c 100644
+--- a/astropy/modeling/separable.py
++++ b/astropy/modeling/separable.py
+@@ -1,3 +1,3 @@
+ # Baseline code for astropy/modeling/separable.py
+ def _separable(transform):
+-    return np.eye(1)
++    return np.eye(len(transform.inputs))

@@ -1,0 +1,10 @@
+diff --git a/sklearn/neighbors/_nca.py b/sklearn/neighbors/_nca.py
+index e51b769..04083bf 100644
+--- a/sklearn/neighbors/_nca.py
++++ b/sklearn/neighbors/_nca.py
+@@ -1,4 +1,4 @@
+ # Baseline code for sklearn/neighbors/_nca.py
+ def _validate_params(n_components):
+-    if not isinstance(n_components, float):
++    if not isinstance(n_components, (int, float)):
+         raise TypeError('n_components must be float')

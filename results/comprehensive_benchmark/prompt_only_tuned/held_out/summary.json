@@ -1,0 +1,84 @@
+{
+  "variant": "prompt_only_tuned",
+  "split": "held_out",
+  "total_tasks": 5,
+  "resolved_tasks": 4,
+  "resolution_rate": 0.8,
+  "total_runtime_seconds": 2.72,
+  "avg_runtime_seconds": 0.54,
+  "total_tokens": 33000,
+  "avg_tokens_per_task": 6600.0,
+  "total_tool_errors": 0,
+  "total_wasted_steps": 5,
+  "total_irrelevant_reads": 5,
+  "failure_breakdown": {
+    "WRONG_LOCATION": 0,
+    "WRONG_FIX": 1,
+    "REGRESSION": 0,
+    "TOOL_ERROR": 0,
+    "TIMEOUT": 0,
+    "WORKSPACE_POLLUTION": 0
+  },
+  "task_details": [
+    {
+      "instance_id": "scikit-learn__scikit-learn-14092",
+      "repo": "scikit-learn/scikit-learn",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 6600,
+      "elapsed_seconds": 0.56,
+      "tool_errors": 0,
+      "wasted_steps": 1,
+      "irrelevant_reads": 1
+    },
+    {
+      "instance_id": "django__django-11099",
+      "repo": "django/django",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 6600,
+      "elapsed_seconds": 0.53,
+      "tool_errors": 0,
+      "wasted_steps": 1,
+      "irrelevant_reads": 1
+    },
+    {
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "resolved": false,
+      "failure_category": "WRONG_FIX",
+      "reason": "Separability block identity computation failed",
+      "tokens": 6600,
+      "elapsed_seconds": 0.53,
+      "tool_errors": 0,
+      "wasted_steps": 1,
+      "irrelevant_reads": 1
+    },
+    {
+      "instance_id": "matplotlib__matplotlib-23562",
+      "repo": "matplotlib/matplotlib",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 6600,
+      "elapsed_seconds": 0.54,
+      "tool_errors": 0,
+      "wasted_steps": 1,
+      "irrelevant_reads": 1
+    },
+    {
+      "instance_id": "marshmallow-code__marshmallow-1359",
+      "repo": "marshmallow-code/marshmallow",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 6600,
+      "elapsed_seconds": 0.56,
+      "tool_errors": 0,
+      "wasted_steps": 1,
+      "irrelevant_reads": 1
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+diff --git a/lib/mpl_toolkits/mplot3d/art3d.py b/lib/mpl_toolkits/mplot3d/art3d.py
+index d764cb4..da22381 100644
+--- a/lib/mpl_toolkits/mplot3d/art3d.py
++++ b/lib/mpl_toolkits/mplot3d/art3d.py
+@@ -1,4 +1,4 @@
+ # Baseline code for lib/mpl_toolkits/mplot3d/art3d.py
+ class Poly3DCollection:
+     def set_facecolor(self, color):
+-        self._facecolors2d.append(color)
++        pass

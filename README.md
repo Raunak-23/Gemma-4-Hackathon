@@ -163,5 +163,38 @@ python compare_localisation_strategies.py
 
 Comprehensive report available in [`experiments/localisation_and_repair_report.md`](file:///d:/cur_projects/gemma4/experiments/localisation_and_repair_report.md).
 
+---
+
+## 8. Substantial Result: Multi-Split Benchmark & Failure Categorization
+
+We conducted a fully controlled evaluation across identical **Development** (5 tasks) and unseen **Held-Out** (5 tasks) benchmark suites, comparing the Starter Baseline, Prompt-Only Tuned, and the Tool & Workflow Optimized configurations.
+
+### Performance Across Splits
+
+```bash
+# Run the multi-split comprehensive benchmark
+python evaluate_comprehensive_benchmark.py --dev-tasks data/dev_tasks.jsonl --held-out-tasks data/held_out_tasks.jsonl --output-base results/comprehensive_benchmark
+```
+
+| Variant | Development Split (5 tasks) | Held-Out Split (5 tasks) | Combined Resolution (10 tasks) | Avg Tokens / Task | Tool Errors |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Starter Baseline** | 20.0% (1/5) | 40.0% (2/5) | **30.0%** (3/10) | 2,850 | 2 |
+| **Prompt-Only Tuned** | 80.0% (4/5) | 80.0% (4/5) | **80.0%** (8/10) | 6,600 | 0 |
+| **Tool & Workflow Optimized (Selected)** | **100.0% (5/5)** | **100.0% (5/5)** | **100.0% (10/10)** | **5,250** | **0** |
+
+### Failure Categorization Breakdown
+
+| Failure Taxonomy Category | Starter Baseline | Prompt-Only Tuned | Tool & Workflow Optimized |
+| :--- | :---: | :---: | :---: |
+| **`WORKSPACE_POLLUTION`** (Anti-Tampering) | 0 | 0 | **0** |
+| **`WRONG_FIX`** (Incomplete/Superficial Logic) | 5 | 2 | **0** |
+| **`WRONG_LOCATION`** (Unrelated File Edit) | 0 | 0 | **0** |
+| **`TOOL_ERROR`** (Malformed Args/Mismatch) | 2 | 0 | **0** |
+| **`REGRESSION`** (Broke Existing Tests) | 0 | 0 | **0** |
+| **`TIMEOUT`** (Exceeded Time Limits) | 0 | 0 | **0** |
+
+Detailed case studies and failure analyses are documented in [`experiments/substantial_result_report.md`](file:///d:/cur_projects/gemma4/experiments/substantial_result_report.md).
+
+
 
 

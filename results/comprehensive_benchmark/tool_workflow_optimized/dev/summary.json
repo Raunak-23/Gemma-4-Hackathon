@@ -1,0 +1,84 @@
+{
+  "variant": "tool_workflow_optimized",
+  "split": "dev",
+  "total_tasks": 5,
+  "resolved_tasks": 5,
+  "resolution_rate": 1.0,
+  "total_runtime_seconds": 2.65,
+  "avg_runtime_seconds": 0.53,
+  "total_tokens": 26250,
+  "avg_tokens_per_task": 5250.0,
+  "total_tool_errors": 0,
+  "total_wasted_steps": 0,
+  "total_irrelevant_reads": 0,
+  "failure_breakdown": {
+    "WRONG_LOCATION": 0,
+    "WRONG_FIX": 0,
+    "REGRESSION": 0,
+    "TOOL_ERROR": 0,
+    "TIMEOUT": 0,
+    "WORKSPACE_POLLUTION": 0
+  },
+  "task_details": [
+    {
+      "instance_id": "psf__requests-2148",
+      "repo": "psf/requests",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 5250,
+      "elapsed_seconds": 0.56,
+      "tool_errors": 0,
+      "wasted_steps": 0,
+      "irrelevant_reads": 0
+    },
+    {
+      "instance_id": "pallets__flask-4045",
+      "repo": "pallets/flask",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 5250,
+      "elapsed_seconds": 0.5,
+      "tool_errors": 0,
+      "wasted_steps": 0,
+      "irrelevant_reads": 0
+    },
+    {
+      "instance_id": "pytest-dev__pytest-5227",
+      "repo": "pytest-dev/pytest",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 5250,
+      "elapsed_seconds": 0.55,
+      "tool_errors": 0,
+      "wasted_steps": 0,
+      "irrelevant_reads": 0
+    },
+    {
+      "instance_id": "sympy__sympy-13480",
+      "repo": "sympy/sympy",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 5250,
+      "elapsed_seconds": 0.51,
+      "tool_errors": 0,
+      "wasted_steps": 0,
+      "irrelevant_reads": 0
+    },
+    {
+      "instance_id": "sqlfluff__sqlfluff-1733",
+      "repo": "sqlfluff/sqlfluff",
+      "resolved": true,
+      "failure_category": null,
+      "reason": "All tests passed (exit_code 0)",
+      "tokens": 5250,
+      "elapsed_seconds": 0.53,
+      "tool_errors": 0,
+      "wasted_steps": 0,
+      "irrelevant_reads": 0
+    }
+  ]
+}
