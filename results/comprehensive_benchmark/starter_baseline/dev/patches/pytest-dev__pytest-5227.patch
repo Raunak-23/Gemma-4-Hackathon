@@ -1,8 +1,0 @@
-diff --git a/src/_pytest/logging.py b/src/_pytest/logging.py
-index 7947342..615605d 100644
---- a/src/_pytest/logging.py
-+++ b/src/_pytest/logging.py
-@@ -1,2 +1,2 @@
- # Baseline code for src/_pytest/logging.py
--DEFAULT_LOG_FORMAT = '%(filename)s %(levelname)s'
-+DEFAULT_LOG_FORMAT = '%(filename)s: %(levelname)s'
