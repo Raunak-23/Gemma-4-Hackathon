@@ -1,0 +1,7 @@
+# Per-task evaluation budgets requested from the harness (swegemma `EvalConfig`).
+# These apply during Stage 1 inference; container setup time is excluded.
+evaluation:
+  timeout_seconds: 300    # per run_command call
+  max_tool_calls: 100     # ~15 localization + 15 reads + 20 edits + 50 verify
+  max_time_minutes: 60    # full agent session
+  max_turns: 200          # hard loop cap; nudges end stuck sessions far earlier

@@ -1,0 +1,4 @@
+# ============================== DEPENDENCIES ==============================
+# vLLM pulls its own torch build (~3 GB, 5-10 min). Safe to re-run.
+%pip install -q vllm openai datasets pandas
+print("dependencies installed")
