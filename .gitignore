@@ -1,10 +1,31 @@
-*.docx
+# --- Internal documents (local work only, never publish) ---
+experiments/
 *.pdf
+*.docx
+*.doc
 *.pptx
+*.ppt
+
+# --- Local evaluation & run artifacts ---
+results/
+kaggle_output/
+workspaces/
+*.log
+
+# --- Python artifacts ---
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
 .pytest_cache/
+.venv/
+venv/
+
+# --- Build artifacts ---
 submission.zip
-results/**/sandboxes/
 
-
+# --- Editors / OS ---
+.ipynb_checkpoints/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

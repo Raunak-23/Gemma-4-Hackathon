@@ -315,24 +315,36 @@ def test_compilation_and_session_templates(agent_config, root_dir):
     if not isinstance(instruction, str) or len(instruction.strip()) == 0:
         return False, "Agent instruction must be a non-empty string"
 
-    # Simulate ADK session state injection
+    # Session state keys the harness populates (hints only when non-empty).
+    known_state_keys = {"problem_description", "hints"}
+
+    # Find every {placeholder} the instruction relies on for ADK state injection.
+    placeholders = set(re.findall(r"\{([a-z_][a-z0-9_]*)\}", instruction))
+
+    unknown = placeholders - known_state_keys
+    if unknown:
+        return False, f"Instruction references unknown session state placeholders: {sorted(unknown)}"
+
+    # Render with a dummy session state covering only the known keys.
     dummy_session_state = {
         "problem_description": "Fix bug in calculation of total tax.",
         "hints": "Check calculate_tax in tax_module.py",
     }
+    rendered = re.sub(
+        r"\{([a-z_][a-z0-9_]*)\}",
+        lambda m: dummy_session_state.get(m.group(1), m.group(0)),
+        instruction,
+    )
 
-    try:
-        # Check that formatting with session state works without unexpected KeyError
-        # Standard ADK replaces known placeholders
-        test_rendered = instruction.format_map({
-            k: v for k, v in dummy_session_state.items()
-        })
-        if "Fix bug in calculation of total tax" not in test_rendered:
-            return False, "Session state placeholder {problem_description} failed to interpolate in instruction"
-    except KeyError as e:
-        return False, f"Unresolved placeholder in agent instruction: {e}"
+    # Any leftover {placeholder} that used a known key must have been replaced.
+    if "Fix bug in calculation of total tax" not in rendered and "problem_description" in placeholders:
+        return False, "Session state placeholder {problem_description} failed to interpolate in instruction"
+    # A template that stays unresolved on the harness side (e.g. {hints} when a
+    # task ships without hints) would leak literal braces into the system prompt.
+    if placeholders == {"hints"}:
+        return False, "Instruction depends on {hints}, which the harness omits when a task has none; reference the hints section of the task message instead"
 
-    print("      OK: Agent instructions compiled and interpolated successfully")
+    print(f"      OK: Agent instructions valid (placeholders: {sorted(placeholders) or 'none'})")
     return True, None
 
 

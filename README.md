@@ -1,200 +1,88 @@
 # Gemma 4 Developer Agent
 
-This repository contains the autonomous coding agent implementation for the **Google – The Gemma 4 Developer Agent Competition** on Kaggle.
+Autonomous coding agent for the **Google – The Gemma 4 Developer Agent Competition** on Kaggle. Given a Python repository snapshot and a written issue (bug report or feature request), the agent localizes the defect, applies a minimal patch, verifies it with tests, and submits a unified git diff.
+
+- **Base model** (fixed by the rules): `gemma-4-31b-it-qat-w4a16-ct`
+- **Environment**: offline sandbox, 4x NVIDIA L4, 32,768-token context (vLLM)
+- **Submission**: declarative YAML only, < 3 GiB unpacked, no Python entrypoints
 
 ---
 
-## 1. Problem Statement
-
-Given a Python repository snapshot frozen at a specific commit and a written issue description (bug report or feature request), the agent must autonomously:
-1. Localize the issue within the codebase using code graph, semantic search, and file tools.
-2. Formulate and apply a minimal, targeted patch.
-3. Validate the fix with test suites to ensure reproduction passes and no regressions occur.
-4. Submit a unified git diff against the baseline commit that passes hidden evaluation tests.
-
-### Competition Constraints
-- **Base Model**: Single fixed model across all agents: `gemma-4-31b-it-qat-w4a16-ct`.
-- **Environment**: Offline / air-gapped container sandbox with 4x NVIDIA L4 GPUs.
-- **Context Length**: Up to 32,768 tokens (vLLM `max_model_len=32768`).
-- **Submission Limits**: Maximum unpacked submission size `< 3 GiB`, strictly declarative configuration (no custom Python entrypoints outside ADK skills).
-
----
-
-## 2. Repository Layout
-
-The repository is structured with `gemma4` as the project root:
+## 1. Repository Layout
 
 ```text
 gemma4/
-├── agent.yaml                  # REQUIRED: Root agent config
-├── configs/
-│   └── sampling.yaml           # Generation parameters loaded via !include
-├── prompts/
-│   ├── system.md               # Root system instructions loaded via !include
-│   └── analyzer.md             # Code analyzer instructions
-├── sub_agents/
-│   └── code_analyzer.yaml      # Sub-agent AgentTool configuration
-├── skills/                     # ADK Skill directories
-│   └── repo_navigation/
-│       ├── SKILL.md
-│       ├── scripts/            # Python scripts executed in a sandbox
-│       │   └── repo_search.py
-│       └── resources/          # Domain knowledge markdown files
-│           └── navigation_patterns.md
-├── package_submission.py       # Helper script to validate & package into submission.zip
-├── HARNESS_README.md           # Competition evaluation harness documentation
-└── README.md                   # Repository documentation
+├── agent.yaml                  # Root agent config (LlmAgent "swe_coder")
+├── eval_config.yaml            # Per-task budgets requested from the harness
+├── configs/sampling.yaml       # Generation parameters (via !include)
+├── prompts/system.md           # System instructions (via !include)
+├── skills/repo_navigation/     # ADK skill: SKILL.md + AST search script + notes
+├── sample_submission/          # Official starter, kept as reference
+├── package_submission.py       # Validate + build submission.zip
+├── run_smoke_test.py           # Offline validation of the full submission contract
+├── kaggle/
+│   ├── gemma4_agent_eval.ipynb     # Kaggle notebook: real eval on GPU (see §4)
+│   ├── build_notebook.py           # Regenerates the notebook from notebook_cells/
+│   ├── notebook_cells/             # Per-cell notebook sources
+│   └── selftest_local.py          # CPU-only end-to-end test of the agent core
+├── data/tasks.jsonl            # Task schema reference (synthetic demo tasks)
+└── HARNESS_README.md           # Official harness & competitor guide
 ```
 
----
+## 2. Agent Design
 
-## 3. Component Details
+**Single direct-tool agent** (`agent.yaml`): the root `LlmAgent` binds all 9 built-in tools (`run_command`, `read_file`, `edit_file`, `write_file`, `get_status`, `submit_patch`, `search_similar_code`, `get_code_neighbors`, `get_code_subgraph`) plus the `repo_navigation` skill. An earlier `code_analyzer` AgentTool variant was dropped: delegation duplicated the system prompt in a second context and lost fidelity on whitespace-sensitive edits, with no resolution gain to show for it.
 
-- **`agent.yaml`**: The primary ADK `LlmAgent` configuration (`swe_coder`). Bound to all 9 execution, workspace, and graph tools, plus the `code_analyzer` AgentTool. Directly runs the base competition model `gemma-4-31b-it-qat-w4a16-ct`.
-- **`configs/sampling.yaml`**: Configures temperature (`0.2`), top-p (`0.95`), top-k (`40`), max output tokens (`16,384`), and thinking budget (`4,096`) compatible with vLLM 32k context.
-- **`prompts/system.md`**: Systematic 6-stage engineering instructions (Understand $\to$ Localize $\to$ Reproduce $\to$ Edit $\to$ Verify $\to$ Submit) incorporating critical gotchas (e.g. scratch files in `/tmp/`, never modifying `conftest.py` or `pytest.ini`).
-- **`prompts/analyzer.md`**: Specialized read-only instructions for the `code_analyzer` sub-agent.
-- **`sub_agents/code_analyzer.yaml`**: Configures an isolated `AgentTool` (`skip_summarization: true`) for read-only exploration and graph inspection.
-- **`adapters/`** *(Optional)*: Unadapted baseline runs directly on the base model without LoRA; fine-tuned weights can be added here in later iterations.
-- **`skills/repo_navigation/`**: ADK skill containing `SKILL.md`, sandboxed AST scanner `scripts/repo_search.py`, and architectural guidance `resources/navigation_patterns.md`.
+**Compact system prompt** ([prompts/system.md](prompts/system.md), ~40 lines): the prompt deliberately stays small — long system prompts burn context and invite hallucinated rules. It encodes only the failure modes that actually cost tasks:
 
----
+| Rule | Failure mode it prevents |
+| :--- | :--- |
+| Scratch files in `/tmp/` only, written via `run_command` | `write_file` resolves inside `/workspace`; leftover files leak into the extracted patch (`git add -N . && git diff`) |
+| Never touch test files / `conftest.py` / `pytest.ini` | Grading resets them anyway; edits are wasted budget |
+| `search_similar_code` with exact symbol names first | Prose queries miss the embedding index; blind graph/subgraph dumps flood the context |
+| 30–50 line `read_file` windows around the located line | Whole-file reads truncate at 150 lines and waste calls |
+| 2–3 anchor context lines in `edit_file` | Non-unique `old_string` matches fail without applying |
+| `pytest -q -x`, pipe long output through `tail` | 5,000-char output truncation hides test results |
+| Reproduce in `/tmp/repro.py` → fail → fix → pass → test → `submit_patch` | Submitting unverified changes or a polluted workspace |
 
-## 4. Packaging and Validation
+The prompt intentionally contains **no `{problem_description}` / `{hints}` placeholders**: the harness populates `hints` in session state only when a task has hints, and the task text already arrives in the harness's user prompt, so templating the system instruction adds failure risk for zero information gain.
 
-When ready to submit to Kaggle, run the packaging utility to validate the directory and build `submission.zip`:
+**Sampling** ([configs/sampling.yaml](configs/sampling.yaml)): greedy decoding (`temperature: 0.0`) for reliable, reproducible tool calls; `top_p: 0.95`, `top_k: 40` (inert at T=0, kept for the vLLM contract); `max_output_tokens: 16384`; `thinking_budget: 4096` with `include_thoughts: true` — per the harness note, `thinking_level` is omitted because it maps to OpenAI's `reasoning_effort` and is unreliable under vLLM + LoRA serving.
+
+**Budgets** ([eval_config.yaml](eval_config.yaml)): 300 s per command, 100 tool calls, 60 min per task, 200 turns — tool-call budget and the 3-nudge stop rule bind long before the turn cap.
+
+## 3. Validate & Package
 
 ```bash
+python run_smoke_test.py .        # archive, schema, tools, sampling, skills, templates
 python package_submission.py . submission.zip
 ```
 
-The script verifies:
-1. Exactly one root configuration (`agent.yaml`).
-2. Adherence to the single model constraint (`gemma-4-31b-it-qat-w4a16-ct`).
-3. Allowed file extensions only (`.yaml`, `.yml`, `.md`, `.txt`, `.py`, `.json`, `.safetensors`).
-4. Total archive size limits (< 3 GiB).
+`submission.zip` is what gets uploaded to Kaggle (it is gitignored — build it fresh).
 
----
+## 4. Evaluation on Kaggle GPUs
 
-## 5. Local Evaluation & Baseline Benchmarking
+No local GPU is needed or used. [kaggle/gemma4_agent_eval.ipynb](kaggle/gemma4_agent_eval.ipynb) runs the real thing on Kaggle:
 
-### Running the End-to-End Evaluation Pipeline
-
-To run the two-phase evaluation pipeline on benchmark tasks:
+1. Serves `gemma-4-31b-it-qat-w4a16-ct` via vLLM (auto tensor-parallel; 2xT4 or 4xL4).
+2. Loads the submission exactly as the harness compiles it (`agent.yaml` + `!include`s) — auto-detects the repo attached as a Kaggle Dataset, else falls back to an embedded snapshot.
+3. Runs the two-phase lifecycle per task: agent workspace at `base_commit` with the 9 tools, budget gating, and continuation nudges → fresh verification workspace with 4-pass patch application, anti-tampering reset, `test_patch`, and hermetic `pytest` + JUnit scoring (`resolved` = exit 0 AND all FAIL_TO_PASS / PASS_TO_PASS pass).
+4. Default tasks: a slice of SWE-bench Lite (real repos, real commits, downloaded via `datasets`). Point `TASKS_JSONL` at the competition's task file once published.
 
 ```bash
-# Evaluate official sample submission
-python evaluate_harness.py --submission-dir sample_submission --results-dir results/baseline_sample_full
-
-# Evaluate custom SWE Gemma agent
-python evaluate_harness.py --submission-dir . --results-dir results/baseline_custom_full --is-custom
+python kaggle/selftest_local.py    # CPU-only: validates the agent core end-to-end
+python kaggle/build_notebook.py    # regenerate the notebook after editing prompts
 ```
 
-### Baseline Benchmark Summary
+The self-test drives the real tool implementations, 3-tier edit matcher, agent loop, and verification pipeline against a toy repository with a scripted model — no GPU or network required.
 
-| Metric | Official Sample Submission | Custom SWE Gemma Agent |
-| :--- | :---: | :---: |
-| **Resolution Rate** | **0.0%** (0 / 5) | **100.0%** (5 / 5) |
-| **Avg Runtime / Task** | 0.47s | 0.57s |
-| **Avg Tokens / Task** | 2,720 tokens | 5,340 tokens |
-| **Tool Errors** | 3 errors | 0 errors |
+## 5. Tuning Workflow
 
-Detailed comparative results and failure analysis are documented in [`experiments/baseline_comparison.md`](file:///d:/cur_projects/gemma4/experiments/baseline_comparison.md).
+1. Run the notebook on a small task set; inspect `eval_results/<id>.trace.json` (every tool call + result) and `results.csv`.
+2. Diagnose failures by category: `patch_apply_failed` (edit discipline), `not_resolved` (wrong fix / missing verification), `env_setup_failed` (task infrastructure, not the agent).
+3. Adjust `prompts/system.md` / `configs/sampling.yaml` in small steps; keep the prompt compact — each rule should be traceable to a failure you actually observed.
+4. Re-run and compare resolution rate, `tool_errors`, and token usage; then rebuild `submission.zip`.
 
----
+## 6. Internal Documents
 
-## 6. Prompt Engineering & Hyperparameter Tuning
-
-To minimize malformed tool calls, eliminate wasted steps, and guarantee clean patches, we tightened system instructions and performed systematic variable-by-variable generation tuning.
-
-### Key Prompt Enhancements
-1. **Tool Parameter Directives**: Mandated passing symbol-only identifiers (`HTTPConnection`, `Blueprint`) to `search_similar_code` to prevent semantic query mismatch.
-2. **Anchor Context Rules for `edit_file`**: Mandated including 2–3 lines of surrounding unchanged context in `old_string` to avoid duplicate matches.
-3. **Workspace Isolation**: Strictly isolates reproduction scripts in `/tmp/repro.py` to prevent workspace pollution during `git add -N . && git diff HEAD`.
-4. **Anti-Tampering Compliance**: Forbids modifying tests or test configuration files (`pytest.ini`, `conftest.py`).
-
-### Systematic Parameter Sweep (One Variable at a Time)
-
-```bash
-# Run the systematic parameter sweep
-python tune_generation_settings.py
-```
-
-| Experiment Series | Parameter Variation | Resolution Rate | Tool Errors | Wasted Steps | Key Finding |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **Series A (Temperature)** | $T = 0.7$ | 80.0% | 15 | 15 | Stochasticity caused malformed queries and edit mismatches |
-| | $T = 0.2$ | 100.0% | 0 | 0 | Highly consistent and robust tool calling |
-| | **$T = 0.0$ (Selected)** | **100.0%** | **0** | **0** | **Greedy decoding eliminated 100% of tool errors** |
-| **Series B (Thinking Budget)** | $B = 1024$ | 80.0% | 0 | 0 | Shallow reasoning failed on singularity math edge cases |
-| | $B = 2048$ | 100.0% | 0 | 0 | Efficient reasoning for standard defects |
-| | **$B = 4096$ (Selected)** | **100.0%** | **0** | **0** | **Deep problem decomposition for complex multi-edge defects** |
-
-Full experiment details and metrics are documented in [`experiments/prompt_and_tuning_report.md`](file:///d:/cur_projects/gemma4/experiments/prompt_and_tuning_report.md).
-
----
-
-## 7. Code Localisation, Repair Loop, and Architecture Optimization
-
-### Key Strategies & Guidelines
-1. **Similarity Search First**: Always execute `search_similar_code` before graph-neighbour (`get_code_neighbors`) or subgraph (`get_code_subgraph`) queries. Embedding lookup pinpoints exact definition lines in 1 turn (~150 tokens) without dumping noisy AST graphs into context.
-2. **Targeted Bounded Slicing**: Prohibit reading from line 1 of files > 50 lines. Slices are bounded to 30–50 lines centered around the localized definition line (`start_line = def_line - 10`, `end_line = def_line + 35`).
-3. **Disciplined Reproduce $\to$ Edit $\to$ Test Loop**:
-   - Write reproduction script strictly to `/tmp/repro.py`.
-   - Validate pre-condition: `python3 /tmp/repro.py` must FAIL before any edits.
-   - Apply surgical edit with 2–3 contextual anchor lines via `edit_file`.
-   - Validate post-condition: `python3 /tmp/repro.py` must PASS with exit code 0.
-   - Run module unit tests with `pytest`.
-   - Inspect `git status && git diff` to verify zero workspace contamination before `submit_patch()`.
-
-### Sub-Agent vs. Direct Tool Use Benchmark
-
-```bash
-# Run the localisation strategies and architecture benchmark
-python compare_localisation_strategies.py
-```
-
-| Strategy / Architecture | Resolution Rate | Tokens / Task | Wasted Steps | Irrelevant Reads | Runtime / Task |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Similarity-First + Direct Tool Use (Selected)** | **100.0%** (5/5) | **5,200** | **0** | **0** | **0.60s** |
-| Graph-First Blind Subgraphs + Broad Reads | 80.0% (4/5) | 6,100 | 10 | 5 | 0.61s |
-| Similarity-First + Sub-Agent (`code_analyzer`) | **100.0%** (5/5) | 8,250 (+58.7%) | 0 | 0 | 0.64s |
-
-**Architectural Decision**: Direct Tool Use achieves 100% resolution with **37.0% fewer tokens** (saving 3,050 tokens/task) and zero inter-agent latency or summarization fidelity loss. Root `agent.yaml` has been streamlined to direct tool use.
-
-Comprehensive report available in [`experiments/localisation_and_repair_report.md`](file:///d:/cur_projects/gemma4/experiments/localisation_and_repair_report.md).
-
----
-
-## 8. Substantial Result: Multi-Split Benchmark & Failure Categorization
-
-We conducted a fully controlled evaluation across identical **Development** (5 tasks) and unseen **Held-Out** (5 tasks) benchmark suites, comparing the Starter Baseline, Prompt-Only Tuned, and the Tool & Workflow Optimized configurations.
-
-### Performance Across Splits
-
-```bash
-# Run the multi-split comprehensive benchmark
-python evaluate_comprehensive_benchmark.py --dev-tasks data/dev_tasks.jsonl --held-out-tasks data/held_out_tasks.jsonl --output-base results/comprehensive_benchmark
-```
-
-| Variant | Development Split (5 tasks) | Held-Out Split (5 tasks) | Combined Resolution (10 tasks) | Avg Tokens / Task | Tool Errors |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Starter Baseline** | 20.0% (1/5) | 40.0% (2/5) | **30.0%** (3/10) | 2,850 | 2 |
-| **Prompt-Only Tuned** | 80.0% (4/5) | 80.0% (4/5) | **80.0%** (8/10) | 6,600 | 0 |
-| **Tool & Workflow Optimized (Selected)** | **100.0% (5/5)** | **100.0% (5/5)** | **100.0% (10/10)** | **5,250** | **0** |
-
-### Failure Categorization Breakdown
-
-| Failure Taxonomy Category | Starter Baseline | Prompt-Only Tuned | Tool & Workflow Optimized |
-| :--- | :---: | :---: | :---: |
-| **`WORKSPACE_POLLUTION`** (Anti-Tampering) | 0 | 0 | **0** |
-| **`WRONG_FIX`** (Incomplete/Superficial Logic) | 5 | 2 | **0** |
-| **`WRONG_LOCATION`** (Unrelated File Edit) | 0 | 0 | **0** |
-| **`TOOL_ERROR`** (Malformed Args/Mismatch) | 2 | 0 | **0** |
-| **`REGRESSION`** (Broke Existing Tests) | 0 | 0 | **0** |
-| **`TIMEOUT`** (Exceeded Time Limits) | 0 | 0 | **0** |
-
-Detailed case studies and failure analyses are documented in [`experiments/substantial_result_report.md`](file:///d:/cur_projects/gemma4/experiments/substantial_result_report.md).
-
-
-
-
+Course reports, presentation decks, and experiment write-ups live in `experiments/` and the repo root but are **gitignored** — they are local working documents, not part of the public repository or the competition submission.
