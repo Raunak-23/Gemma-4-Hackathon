@@ -217,7 +217,9 @@ def build_task_prompt(task, budget, workspace_dir):
                 "- search_similar_code(query): Find semantically similar functions/classes by keyword.\n"
                 "- get_code_neighbors(node): Find callers, callees, and definitions related to a symbol.\n"
                 "- get_code_subgraph(nodes): Get the induced subgraph for a set of symbols.")
-    secs.append("## Workspace Layout\n" + _workspace_layout(workspace_dir))
+    # Avoid flooding small-context models with a recursive repository listing.
+    secs.append("## Workspace Layout\nRepository files are available under /workspace. "
+                "Use targeted commands and read_file to inspect relevant files.")
     return "\n\n".join(secs)
 
 
@@ -245,6 +247,7 @@ def run_agent_task(task, ctx, chat, system_prompt, budget, verbose=True):
     messages = [{"role": "system", "content": render_system_prompt(system_prompt, task)},
                 {"role": "user", "content": build_task_prompt(task, budget, ctx.workspace)}]
     trace, tokens = [], {"prompt": 0, "completion": 0}
+    inspected_files = set()
     consecutive_nudges = 0
     while True:
         if ctx.turns_used >= budget["max_turns"]:
@@ -292,6 +295,14 @@ def run_agent_task(task, ctx, chat, system_prompt, budget, verbose=True):
         for call in calls:
             log(f"[turn {ctx.turns_used}] {call['name']} {json.dumps(call['arguments'])[:160]}")
             result = ctx.execute(call["name"], call["arguments"])
+            if call["name"] == "read_file":
+                filepath = str(call["arguments"].get("filepath", "")).strip().strip("\"\'")
+                if filepath in inspected_files:
+                    result = ("Repeated read of " + filepath + ". This file was already inspected. "
+                              "Use the earlier result; move on to a different file, a targeted edit, "
+                              "a test, or submit_patch.")
+                else:
+                    inspected_files.add(filepath)
             trace.append({"turn": ctx.turns_used, "tool": call["name"],
                           "arguments": call["arguments"], "result": result[:2000]})
             if mode == "native":
