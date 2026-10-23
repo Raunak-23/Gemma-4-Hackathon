@@ -247,6 +247,7 @@ def run_agent_task(task, ctx, chat, system_prompt, budget, verbose=True):
     messages = [{"role": "system", "content": render_system_prompt(system_prompt, task)},
                 {"role": "user", "content": build_task_prompt(task, budget, ctx.workspace)}]
     trace, tokens = [], {"prompt": 0, "completion": 0}
+    inspected_files = set()
     consecutive_nudges = 0
     while True:
         if ctx.turns_used >= budget["max_turns"]:
@@ -294,6 +295,14 @@ def run_agent_task(task, ctx, chat, system_prompt, budget, verbose=True):
         for call in calls:
             log(f"[turn {ctx.turns_used}] {call['name']} {json.dumps(call['arguments'])[:160]}")
             result = ctx.execute(call["name"], call["arguments"])
+            if call["name"] == "read_file":
+                filepath = str(call["arguments"].get("filepath", "")).strip().strip("\"\'")
+                if filepath in inspected_files:
+                    result = ("Repeated read of " + filepath + ". This file was already inspected. "
+                              "Use the earlier result; move on to a different file, a targeted edit, "
+                              "a test, or submit_patch.")
+                else:
+                    inspected_files.add(filepath)
             trace.append({"turn": ctx.turns_used, "tool": call["name"],
                           "arguments": call["arguments"], "result": result[:2000]})
             if mode == "native":
