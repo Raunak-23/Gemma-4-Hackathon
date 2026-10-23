@@ -217,7 +217,9 @@ def build_task_prompt(task, budget, workspace_dir):
                 "- search_similar_code(query): Find semantically similar functions/classes by keyword.\n"
                 "- get_code_neighbors(node): Find callers, callees, and definitions related to a symbol.\n"
                 "- get_code_subgraph(nodes): Get the induced subgraph for a set of symbols.")
-    secs.append("## Workspace Layout\n" + _workspace_layout(workspace_dir))
+    # Avoid flooding small-context models with a recursive repository listing.
+    secs.append("## Workspace Layout\nRepository files are available under /workspace. "
+                "Use targeted commands and read_file to inspect relevant files.")
     return "\n\n".join(secs)
 
 
